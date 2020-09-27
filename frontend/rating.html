@@ -1,0 +1,225 @@
+<html>
+	<head>
+		<title>Ratings</title>
+		<!--<link rel="stylesheet" type="text/css" href="stil.css"></link>-->
+		<style>
+			table {
+				border-collapse: collapse;
+			}
+			td {
+				padding: 1px 5px 1px 3px;
+			}
+			.edit {
+				cursor: pointer;
+			}
+			.delete{
+				text-decoration:underline;
+				cursor: pointer;
+			}
+			span {
+				font-size:14px;
+			
+			}
+		</style>
+	</head>
+	<body>
+		<script>
+			var numberOfElements;
+			var itemName;
+			//var mostPopularItem, mpid, mpindex;
+			var rjArray = new Array();
+			function loadTable() {
+				var array = new Array();
+				var xhttp = new XMLHttpRequest();
+				xhttp.onreadystatechange = function() {
+					if (this.readyState == 4 && this.status == 200) {
+						array = JSON.parse(this.responseText);
+						rjArray = array;
+						document.getElementById('myTable').innerHTML = createTableHTML(array);
+						setNumberOfElements(array.length);
+						console.log('Length of array: ' + array.length);	
+					}
+				};
+				xhttp.open("GET", "http://localhost:8080/ratingsJoined", true);
+				xhttp.send();
+				console.log("getratingJoined");
+			}
+			function createTableHTML(array) {
+				//console.log('Length of array: ' + array.length);
+				var result = "<tr><th>Customer Id</th><th>First Name</th><th>Lastname</th><th>Item Id</th><th>Item Name</th><th>Rating</th></tr>";
+				for(var i = 0; i < array.length; i++) {
+					result += "<tr>";
+					result += "<td>" + array[i].customerId + "</td>";
+					result += "<td>" + array[i].firstname + "</td>";
+					result += "<td>" + array[i].sirname + "</td>";
+					result += "<td>" + array[i].itemId + "</td>";
+					result += "<td>" + array[i].itemName + "</td>";
+					result += "<td contenteditable>" + array[i].rating.toFixed(1) + "</td>";
+					result += '<td><img onclick="editRating(' 
+					+ array[i].customerId + ', ' + array[i].itemId + ')" class="edit" src="save.png"></td>';
+					result += '<td><b onclick="deleteRating(' 
+					+ array[i].customerId + ', ' + array[i].itemId + ')" class="delete">delete</b></td>';
+					result += "</tr>";
+				}
+				console.log("createTableHTML");
+				//console.log(result);
+				return result;
+			}
+			function editRating(id1, id2){
+				var table = document.getElementById('myTable');
+				
+				//console.log("edit(" + id + ")");
+				var row = 1;
+				while(true) { 
+					//console.log("table.rows[row].cells[0].innerHTML: " + table.rows[row].cells[0].innerHTML);
+					
+					if(table.rows[row].cells[0].innerHTML == id1 && table.rows[row].cells[3].innerHTML == id2){
+						break;
+					}else if(table.rows.length == row - 1){
+						console.log("No such item.");
+						return;
+					}
+					row++;
+					
+				}
+				alert("row" + row + "?" + table.rows[row].cells[5].innerHTML);
+				rjArray[row - 1].rating = parseFloat(table.rows[row].cells[5].innerHTML);
+				//alert("nedir: " + rjArray[row - 1].rating);
+				var xhttp = new XMLHttpRequest();
+				xhttp.onreadystatechange = function() {
+					if (this.readyState == 4 && this.status == 200) {
+						console.log("Successfully updated..");
+					}else if(this.status != 0 && this.status != 200){
+						console.log("Failed to update.." + this.status);
+					}
+				};
+				
+				xhttp.open("PUT", "http://localhost:8080/rating", true);
+				xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+				//alert(JSON.stringify(itemArray[row]));
+				var object = {customerId:id1, itemId:id2, rating: rjArray[row - 1].rating};
+				xhttp.send(JSON.stringify(object));
+			}
+			function deleteRating(id1, id2){
+				var table = document.getElementById('myTable');
+				var row = 1;
+				while(true) { 
+					//console.log("table.rows[row].cells[0].innerHTML: " + table.rows[row].cells[0].innerHTML);
+					if(table.rows[row].cells[0].innerHTML == id1 && table.rows[row].cells[3].innerHTML == id2){
+						break;
+					}else if(table.rows.length == row){
+						console.log("No such item.");
+						return;
+					}
+					row++;
+				}
+				var xhttp = new XMLHttpRequest();
+				xhttp.onreadystatechange = function() {
+					if (this.readyState == 4 && this.status == 200) {
+						console.log("Successfully deleted..");
+						table.deleteRow(row);
+						setNumberOfElements(numberOfElements - 1);
+					}else if(this.status != 0 && this.status != 200){
+						console.log("Failed to delete.." + this.status);
+					}
+				};
+				xhttp.open("DELETE", "http://localhost:8080/rating/" + id1 + "/" + id2, true);
+				xhttp.send();
+			}
+			function saveRating(){
+				var tableString = document.getElementById('myTable').innerHTML;
+				var xhttp = new XMLHttpRequest();
+				xhttp.onreadystatechange = function() {
+					if (this.readyState == 4 && this.status == 200) {
+						
+						console.log("Successfully saved..");
+						var object = JSON.parse(this.responseText);
+						tableString += "<tr>";
+						tableString += "<td>" + object.customerId + "</td>";
+						tableString += "<td>" + "loading..." + "</td>";
+						tableString += "<td>" + "loading..." + "</td>";
+						tableString += "<td>" + object.itemId + "</td>";
+						tableString += "<td>" + "loading..." + "</td>";
+						tableString += "<td contenteditable>" + object.rating.toFixed(1) + "</td>";
+						tableString += '<td><img onclick="editRating('
+						+ object.customerId + ', ' + object.itemId + ')" class="edit" src="save.png"></td>';
+						tableString += '<td><b onclick="deleteRating('
+						+ object.customerId + ', ' + object.itemId + ')" class="delete">delete</b></td>';
+						tableString += "</tr>";
+						document.getElementById('myTable').innerHTML = tableString;
+						setNumberOfElements(numberOfElements + 1);
+						setCustomer(parseInt(document.getElementById("iCustomerID").value));
+					}else if(this.status != 0 && this.status != 200){
+						console.log("Failed to save.." + this.status);
+					}
+				};
+				xhttp.open("POST", "http://localhost:8080/rating", true);
+				xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+				xhttp.send(JSON.stringify({customerId: parseInt(document.getElementById("iCustomerID").value),
+				itemId: parseInt(document.getElementById("iITemID").value),
+				rating: parseFloat(document.getElementById("iRating").value)}));
+				itemId = parseInt(document.getElementById("iITemID").value);
+			}
+			function setCustomer(id){
+				var table = document.getElementById("myTable");
+				var row = table.rows.length - 1;
+				
+				var xhttp = new XMLHttpRequest();
+				var customer = null;
+				xhttp.onreadystatechange = function() {
+					if (this.readyState == 4 && this.status == 200) {
+						customer = JSON.parse(this.responseText);
+						table.rows[row].cells[1].innerHTML = customer.firstname;
+						table.rows[row].cells[2].innerHTML = customer.sirname;
+					}
+				};
+				xhttp.open("GET", "http://localhost:8080/customer/" + id, true);
+				xhttp.send();
+			}
+			function setItem(id){
+				var table = document.getElementById("myTable");
+				var row = table.rows.length - 1;
+			
+				var xhttp = new XMLHttpRequest();
+				var item = null;
+				xhttp.onreadystatechange = function() {
+					if (this.readyState == 4 && this.status == 200) {
+						item = JSON.parse(this.responseText);
+						table.rows[row].cells[4].innerHTML = item.itemName;
+					}
+				};
+				xhttp.open("GET", "http://localhost:8080/item/" + id, true);
+				xhttp.send();
+			}
+			function loadItemName(){
+				setItem(itemId);
+			}
+			function setNumberOfElements(number){
+				numberOfElements = number;
+				document.getElementById("noe").innerHTML = "" + numberOfElements;
+			}
+			
+			loadTable();
+		</script>
+		<button onclick="loadTable()"><img src="refresh.png"></button>Refresh Table
+		<h3>Statistics<h3>
+		<span>Number of Elements: </span> <span id="noe">loading...</span></br>
+		<table border="1" id="myTable"></table></br></br>
+		<table>
+			<tr>
+				<td>Customer Id: </td>
+				<td><input id="iCustomerID" type="number" name="customerId" value=""></br></td>
+			</tr>
+			<tr>
+				<td>Item Id: </td>
+				<td><input id="iITemID" type="number" name="itemId" value=""></br></td>
+			</tr>
+			<tr>
+				<td>Rating:</td>
+				<td><input id="iRating" type="number" step="any" name="rating" value=""></br></td>
+			</tr>
+		</table>
+		<button onclick="saveRating()">Save Rating</button>
+		<button onclick="loadItemName()">Load Item Name</button>
+	</body>
+</html>

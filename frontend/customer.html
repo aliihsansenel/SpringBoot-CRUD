@@ -1,0 +1,186 @@
+<html>
+	<head>
+		<title>Customers</title>
+		<!--<link rel="stylesheet" type="text/css" href="stil.css"></link>-->
+		<style>
+			table {
+				border-collapse: collapse;
+			}
+			td {
+				padding: 1px 5px 1px 3px;
+			}
+			.edit {
+				cursor: pointer;
+			}
+			.delete{
+				text-decoration:underline;
+				cursor: pointer;
+			}
+			span {
+				font-size:14px;
+			
+			}
+		</style>
+	</head>
+	<body>
+		<script>
+			var numberOfElements;
+			var customerArray = new Array();
+			function loadTable() {
+				var array = new Array();
+				var xhttp = new XMLHttpRequest();
+				xhttp.onreadystatechange = function() {
+					if (this.readyState == 4 && this.status == 200) {
+						array = JSON.parse(this.responseText);
+						customerArray = array;
+						document.getElementById('myTable').innerHTML = createTableHTML(array);
+						setNumberOfElements(array.length);
+						console.log('Length of array: ' + array.length);	
+					}
+				};
+				xhttp.open("GET", "http://localhost:8080/customers", true);
+				//xhttp.setRequestHeader("Access-Control-Allow-Headers", "*");
+				//xhttp.setRequestHeader("Allow-Control-Allow-Origin", "*");
+				
+				xhttp.send();
+				console.log("getCustomers");
+			}
+			function createTableHTML(array) {
+				//console.log('Length of array: ' + array.length);
+				var result = "<tr><th>Customer Id</th><th>Firstname</th><th>Sirname</th><th>Address</th></tr>";
+				for(var i = 0; i < array.length; i++) {
+					result += "<tr>";
+					//console.log("bir döngü");
+					result += "<td>" + array[i].customerId + "</td>";
+					result += "<td contenteditable>" + array[i].firstname + "</td>";
+					result += "<td contenteditable>" + array[i].sirname + "</td>";
+					result += "<td contenteditable>" + array[i].address + "</td>";
+					result += '<td><img onclick=edit(' 
+					+ array[i].customerId + ') class="edit" src="save.png"></td>';
+					result += '<td><b onclick=deleteCustomer(' 
+					+ array[i].customerId + ') class="delete">delete</b></td>';
+					result += "</tr>";
+				}
+				console.log("createTableHTML");
+				//console.log(result);
+				return result;
+			}
+			function edit(id){
+				var table = document.getElementById('myTable');
+				//console.log("edit(" + id + ")");
+				var row = 1; 
+				
+				while(true) { 
+					//console.log("table.rows[row].cells[0].innerHTML: " + table.rows[row].cells[0].innerHTML);
+					if(table.rows[row++].cells[0].innerHTML == id){
+						break;
+					}else if(table.rows.length == row){
+						console.log("No such item.");
+						return;
+					}
+					
+					
+				} row -= 2;
+				//console.log("item: " + row);
+				customerArray[row].firstname = table.rows[row + 1].cells[1].innerHTML;
+				customerArray[row].sirname = table.rows[row + 1].cells[2].innerHTML;
+				customerArray[row].address = table.rows[row + 1].cells[3].innerHTML;
+				var xhttp = new XMLHttpRequest();
+				xhttp.onreadystatechange = function() {
+					if (this.readyState == 4 && this.status == 200) {
+						console.log("Successfully updated..");
+					}else if(this.status != 0 && this.status != 200){
+						console.log("Failed to update.." + this.status);
+					}
+				};
+				
+				xhttp.open("PUT", "http://localhost:8080/customer", true);
+				xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+				xhttp.send(JSON.stringify(customerArray[row]));
+			}
+			function deleteCustomer(id){
+				var table = document.getElementById('myTable');
+				var row = 1;
+				while(true) { 
+					//console.log("table.rows[row].cells[0].innerHTML: " + table.rows[row].cells[0].innerHTML);
+					if(table.rows[row++].cells[0].innerHTML == id){
+						break;
+					}else if(table.rows.length == row){
+						console.log("No such item.");
+						return;
+					}
+				} row--;
+				var xhttp = new XMLHttpRequest();
+				xhttp.onreadystatechange = function() {
+					if (this.readyState == 4 && this.status == 200) {
+						console.log("Successfully deleted..");
+						table.deleteRow(row);
+						setNumberOfElements(numberOfElements - 1);
+					}else if(this.status != 0 && this.status != 200){
+						console.log("Failed to delete.." + this.status);
+					}
+				};
+				xhttp.open("DELETE", "http://localhost:8080/customer/" + id, true);
+				xhttp.send();
+			}
+			function saveCustomer(){
+				var tableString = document.getElementById('myTable').innerHTML;
+				var xhttp = new XMLHttpRequest();
+				xhttp.onreadystatechange = function() {
+					if (this.readyState == 4 && this.status == 200) {
+						console.log("Successfully saved..");
+						var object = JSON.parse(this.responseText);
+						
+						tableString += "<tr>";
+						//console.log("bir döngü");
+						tableString += "<td>" + object.customerId + "</td>";
+						tableString += "<td contenteditable>" + object.firstname + "</td>";
+						tableString += "<td contenteditable>" + object.sirname + "</td>";
+						tableString += "<td contenteditable>" + object.address + "</td>";
+						tableString += '<td><img onclick=edit(' 
+						+ object.customerId + ') class="edit" src="save.png"></td>';
+						tableString += '<td><b onclick=deleteCustomer(' 
+						+ object.customerId + ') class="delete">delete</b></td>';
+						tableString += "</tr>";
+						document.getElementById('myTable').innerHTML = tableString;
+						setNumberOfElements(numberOfElements + 1);
+					}else if(this.status != 0 && this.status != 200){
+						console.log("Failed to save.." + this.status);
+					}
+				};
+				xhttp.open("POST", "http://localhost:8080/customer", true);
+				xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+				xhttp.send('{"firstname" : "' + document.getElementById("iFirstname").value 
+				+ '","sirname" : "' + document.getElementById("iSirname").value  + '","address" : "' 
+				+ document.getElementById("iAddress").value  + '"}');
+				//xhttp.send(JSON.stringify(toBeAdded));
+				
+			}
+			function setNumberOfElements(number){
+				numberOfElements = number;
+				document.getElementById("noe").innerHTML = "" + numberOfElements;
+			}
+			loadTable();
+		</script>
+		<button onclick="loadTable()"><img src="refresh.png"></button>Refresh Table
+		<h3>Statistics<h3>
+		<span>Number of Elements: </span> <span id="noe">loading...</span></br>
+		<table border="1" id="myTable"></table></br></br>
+		<table>
+			<tr>
+				<td>Firstname: </td>
+				<td><input id="iFirstname" type="text" name="firstname" value=""></br></td>
+			</tr>
+			<tr>
+				<td>Sirname: </td>
+				<td><input id="iSirname" type="text" name="sirname" value=""></br></td>
+			</tr>
+			<tr>
+				<td>Address: </td>
+				<td><input id="iAddress" type="text" name="address" value=""></br></td>
+			</tr>
+		</table>
+		<button onclick="saveCustomer()">Save Customer</button>
+		<!--<button onclick="alert(document.getElementById('iSirname').value);">show</button>-->
+	</body>
+</html>
